@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">Expense Manager</string>
+
+    <!-- Start Fragment -->
+    <string name="start_title">Manage expenses easily!</string>
+    <string name="btn_start">Start</string>
+
+    <!-- Dashboard -->
+    <string name="hello">Hello,</string>
+    <string name="total_balance">Total Balance</string>
+    <string name="income">Income</string>
+    <string name="expense">Expense</string>
+    <string name="recent_transactions">Recent Transactions</string>
+    <string name="see_all">See All</string>
+    <string name="monthly_stats">Monthly Statistics</string>
+
+    <!-- History -->
+    <string name="history_title">Transaction History</string>
+    <string name="filter_all">All</string>
+    <string name="no_transactions">No transactions found</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_desc">Customize your account and financial management experience.</string>
+    <string name="header_account">ACCOUNT</string>
+    <string name="profile_label">Personal Profile</string>
+    <string name="security_label">Security &amp; Data</string>
+    <string name="security_desc">Password, PIN and Data Management</string>
+    <string name="header_custom">CUSTOMIZATION</string>
+    <string name="notifications_label">Notifications</string>
+    <string name="notifications_desc">Daily record reminders</string>
+    <string name="language_label">Language</string>
+    <string name="dark_mode_label">Dark Mode</string>
+    <string name="dark_mode_desc">Protect your eyes at night</string>
+    <string name="header_other">OTHER</string>
+    <string name="support_label">Support &amp; Contact</string>
+    <string name="support_desc">24/7 Help Center</string>
+    <string name="logout_label">Logout</string>
+</resources>

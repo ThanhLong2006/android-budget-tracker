@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <EditText
+        android:id="@+id/et_account_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tên tài khoản (Ví dụ: ATM, Tiền mặt)"
+        android:inputType="text"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_rounded"
+        android:backgroundTint="#F1F5F9"/>
+
+    <EditText
+        android:id="@+id/et_account_balance"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Số dư ban đầu"
+        android:inputType="numberDecimal"
+        android:padding="12dp"
+        android:background="@drawable/bg_rounded"
+        android:backgroundTint="#F1F5F9"/>
+
+</LinearLayout>

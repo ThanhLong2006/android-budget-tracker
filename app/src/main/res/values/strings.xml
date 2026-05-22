@@ -1,0 +1,49 @@
+<resources>
+    <string name="app_name">Quanlychitieu</string>
+
+    <!-- Start Fragment -->
+    <string name="start_title">Quản lý chi tiêu dễ dàng !</string>
+    <string name="btn_start">Bắt đầu</string>
+
+    <!-- Dashboard -->
+    <string name="hello">Xin chào,</string>
+    <string name="total_balance">Tổng số dư</string>
+    <string name="income">Thu nhập</string>
+    <string name="expense">Chi tiêu</string>
+    <string name="recent_transactions">Giao dịch gần đây</string>
+    <string name="see_all">Xem tất cả</string>
+    <string name="monthly_stats">Thống kê tháng</string>
+
+    <!-- History -->
+    <string name="history_title">Lịch sử giao dịch</string>
+    <string name="filter_all">Tất cả</string>
+    <string name="no_transactions">Không có giao dịch nào</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Cài đặt</string>
+    <string name="settings_desc">Tùy chỉnh tài khoản và trải nghiệm quản lý tài chính của bạn.</string>
+    <string name="header_account">TÀI KHOẢN</string>
+    <string name="profile_label">Hồ sơ cá nhân</string>
+    <string name="security_label">Bảo mật &amp; Dữ liệu</string>
+    <string name="security_desc">Mật khẩu, Mã PIN và Quản lý dữ liệu</string>
+    <string name="header_custom">TÙY CHỈNH</string>
+    <string name="notifications_label">Thông báo</string>
+    <string name="notifications_desc">Nhắc nhở ghi chép hàng ngày</string>
+    <string name="language_label">Ngôn ngữ</string>
+    <string name="dark_mode_label">Chế độ tối</string>
+    <string name="dark_mode_desc">Bảo vệ mắt vào ban đêm</string>
+    <string name="header_other">KHÁC</string>
+    <string name="support_label">Hỗ trợ &amp; Liên hệ</string>
+    <string name="support_desc">Trung tâm trợ giúp 24/7</string>
+    <string name="logout_label">Đăng xuất</string>
+
+    <!-- Preferences / Settings Extra -->
+    <string name="messages_header">Tin nhắn</string>
+    <string name="signature_title">Chữ ký</string>
+    <string name="reply_title">Tiêu đề phản hồi</string>
+    <string name="sync_header">Đồng bộ</string>
+    <string name="sync_title">Đồng bộ hóa dữ liệu</string>
+    <string name="attachment_title">Tệp đính kèm</string>
+    <string name="attachment_summary_on">Bật tệp đính kèm</string>
+    <string name="attachment_summary_off">Tắt tệp đính kèm</string>
+</resources>

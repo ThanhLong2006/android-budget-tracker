@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@id/nav_start">
+
+    <fragment
+        android:id="@+id/nav_start"
+        android:name="com.example.quanlychitieu.StartFragment"
+        android:label="Bắt đầu"
+        tools:layout="@layout/fragment_start">
+        <action
+            android:id="@+id/action_start_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/nav_start"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_start_to_dashboard"
+            app:destination="@id/nav_dashboard"
+            app:popUpTo="@id/nav_start"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.quanlychitieu.auth.LoginFragment"
+        android:label="Đăng nhập"
+        tools:layout="@layout/fragment_login">
+        <action
+            android:id="@+id/action_login_to_register"
+            app:destination="@id/registerFragment" />
+        <action
+            android:id="@+id/action_login_to_forgotPassword"
+            app:destination="@id/forgotPasswordFragment" />
+        <action
+            android:id="@+id/action_login_to_dashboard"
+            app:destination="@id/nav_dashboard"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/registerFragment"
+        android:name="com.example.quanlychitieu.auth.RegisterFragment"
+        android:label="Đăng ký"
+        tools:layout="@layout/fragment_register">
+        <action
+            android:id="@+id/action_register_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/forgotPasswordFragment"
+        android:name="com.example.quanlychitieu.auth.ForgotPasswordFragment"
+        android:label="Quên mật khẩu"
+        tools:layout="@layout/fragment_forgot_password">
+        <action
+            android:id="@+id/action_forgotPassword_to_resetPassword"
+            app:destination="@id/resetPasswordFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/resetPasswordFragment"
+        android:name="com.example.quanlychitieu.auth.ResetPasswordFragment"
+        android:label="Đặt lại mật khẩu"
+        tools:layout="@layout/fragment_reset_password">
+        <action
+            android:id="@+id/action_resetPassword_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_dashboard"
+        android:name="com.example.quanlychitieu.DashboardFragment"
+        android:label="Trang chủ"
+        tools:layout="@layout/fragment_dashboard">
+        <action
+            android:id="@+id/action_nav_dashboard_to_addTransactionFragment"
+            app:destination="@id/addTransactionFragment" />
+        <action
+            android:id="@+id/action_nav_dashboard_to_nav_wallet"
+            app:destination="@id/nav_wallet" />
+        <action
+            android:id="@+id/action_nav_dashboard_to_nav_budget"
+            app:destination="@id/nav_budget" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_history"
+        android:name="com.example.quanlychitieu.historyFragment"
+        android:label="Lịch sử"
+        tools:layout="@layout/fragment_history">
+        <action
+            android:id="@+id/action_nav_history_to_addTransactionFragment"
+            app:destination="@id/addTransactionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_statistical"
+        android:name="com.example.quanlychitieu.statisticalFragment"
+        android:label="Thống kê"
+        tools:layout="@layout/fragment_statistical" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.example.quanlychitieu.SettingsFragment"
+        android:label="Cài đặt"
+        tools:layout="@layout/fragment_settings">
+        <!-- Thêm Action Đăng xuất: Chuyển về Login và xóa sạch Backstack để không thể quay lại trang Settings -->
+        <action
+            android:id="@+id/action_settings_to_login"
+            app:destination="@id/loginFragment"
+            app:popUpTo="@id/mobile_navigation"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addTransactionFragment"
+        android:name="com.example.quanlychitieu.AddTransactionFragment"
+        android:label="Thêm giao dịch"
+        tools:layout="@layout/fragment_add_transaction">
+        <argument
+            android:name="transactionId"
+            app:argType="integer"
+            android:defaultValue="-1" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_wallet"
+        android:name="com.example.quanlychitieu.WalletFragment"
+        android:label="Quản lý Ví"
+        tools:layout="@layout/fragment_wallet" />
+
+    <fragment
+        android:id="@+id/nav_budget"
+        android:name="com.example.quanlychitieu.BudgetFragment"
+        android:label="Ngân sách"
+        tools:layout="@layout/fragment_budget" />
+
+</navigation>

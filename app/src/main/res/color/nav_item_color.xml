@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Khi item được chọn (checked) -->
+    <item android:state_checked="true" android:color="@color/blue_primary" />
+
+    <!-- Khi item không được chọn -->
+    <item android:state_checked="false" android:color="@color/gray_medium" />
+
+</selector>

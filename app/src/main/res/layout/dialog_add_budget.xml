@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tv_select_category"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Chọn danh mục"
+        android:padding="12dp"
+        android:layout_marginBottom="12dp"
+        android:background="@drawable/bg_rounded"
+        android:backgroundTint="#F1F5F9"
+        android:drawableEnd="@drawable/outline_chevron_right_24" />
+
+    <EditText
+        android:id="@+id/et_budget_amount"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Hạn mức chi tiêu"
+        android:inputType="numberDecimal"
+        android:padding="12dp"
+        android:background="@drawable/bg_rounded"
+        android:backgroundTint="#F1F5F9"/>
+
+</LinearLayout>

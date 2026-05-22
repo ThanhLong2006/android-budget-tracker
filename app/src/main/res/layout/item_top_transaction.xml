@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="16dp"
+    android:background="?attr/selectableItemBackground"
+    android:gravity="center_vertical">
+
+    <!-- Icon danh mục -->
+    <FrameLayout
+        android:layout_width="48dp"
+        android:layout_height="48dp">
+
+        <ImageView
+            android:id="@+id/iv_category_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_circle_white"
+            android:padding="10dp"
+            android:src="@drawable/outline_add_shopping_cart_24"
+            app:tint="@color/expense_red"
+            tools:ignore="ContentDescription" />
+    </FrameLayout>
+
+    <!-- Thông tin chính -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="16dp">
+
+        <!-- Tên giao dịch -->
+        <TextView
+            android:id="@+id/tv_transaction_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Starbucks Coffee"
+            android:textSize="15.5sp"
+            android:textStyle="normal"
+            android:textColor="@color/text_primary"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Danh mục + Thời gian -->
+        <TextView
+            android:id="@+id/tv_category_and_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ăn uống • 09:45"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
+
+    <!-- Số tiền -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="end">
+
+        <TextView
+            android:id="@+id/tv_amount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="-120.000 ₫"
+            android:textSize="16.5sp"
+            android:textStyle="bold"
+            android:textColor="@color/expense_red" />
+
+        <!-- Phần trăm (nếu có) -->
+        <TextView
+            android:id="@+id/tv_percentage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2.8%"
+            android:textSize="12sp"
+            android:textColor="@color/expense_red"
+            android:layout_marginTop="2dp"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+</LinearLayout>

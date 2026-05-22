@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="20dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="0.8dp"
+    app:strokeColor="@color/gray_light">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:layout_marginTop="100px">
+
+        <!-- Icon loại giao dịch (màu động theo thu/chi) -->
+        <ImageView
+            android:id="@+id/iv_transaction_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/circle_background"
+            android:padding="10dp"
+            android:src="@drawable/outline_add_shopping_cart_24"
+            app:tint="@color/expense_color"
+            tools:ignore="ContentDescription" />
+
+        <!-- Thông tin giao dịch -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="16dp">
+
+            <!-- Tên giao dịch / Mô tả -->
+            <TextView
+                android:id="@+id/tv_transaction_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Mua sắm siêu thị"
+                android:textSize="16.5sp"
+                android:textStyle="normal"
+                android:textColor="@color/black"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- Danh mục hoặc thời gian -->
+            <TextView
+                android:id="@+id/tv_transaction_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Siêu thị Big C • 14:32"
+                android:textSize="13.5sp"
+                android:textColor="@color/gray_dark"
+                android:layout_marginTop="3dp" />
+
+        </LinearLayout>
+
+        <!-- Số tiền + loại (thu/chi) -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <!-- Số tiền -->
+            <TextView
+                android:id="@+id/tv_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-285.000 ₫"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/expense_color"
+                tools:text="+1.250.000 ₫" />
+
+            <!-- Trạng thái (nếu cần) -->
+            <TextView
+                android:id="@+id/tv_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Hoàn thành"
+                android:textSize="12sp"
+                android:textColor="@color/green_success"
+                android:layout_marginTop="4dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
