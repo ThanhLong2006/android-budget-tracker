@@ -10,24 +10,30 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import com.example.quanlychitieu.data.dao.AccountDao;
 import com.example.quanlychitieu.data.dao.BudgetDao;
 import com.example.quanlychitieu.data.dao.CategoryDao;
+import com.example.quanlychitieu.data.dao.DebtLoanDao;
+import com.example.quanlychitieu.data.dao.RecurringTransactionDao;
 import com.example.quanlychitieu.data.dao.TransactionDao;
 import com.example.quanlychitieu.data.entities.Account;
 import com.example.quanlychitieu.data.entities.Budget;
 import com.example.quanlychitieu.data.entities.Category;
+import com.example.quanlychitieu.data.entities.DebtLoan;
+import com.example.quanlychitieu.data.entities.RecurringTransaction;
 import com.example.quanlychitieu.data.entities.Transaction;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {Transaction.class, Category.class, Account.class, Budget.class},
-        version = 8, 
+@Database(entities = {Transaction.class, Category.class, Account.class, Budget.class, DebtLoan.class, RecurringTransaction.class},
+        version = 10, 
         exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract TransactionDao transactionDao();
     public abstract CategoryDao categoryDao();
     public abstract AccountDao accountDao();
     public abstract BudgetDao budgetDao();
+    public abstract DebtLoanDao debtLoanDao();
+    public abstract RecurringTransactionDao recurringTransactionDao();
     
     private static final int NUMBER_OF_THREADS = 4;
     public static final ExecutorService databaseWriteExecutor =

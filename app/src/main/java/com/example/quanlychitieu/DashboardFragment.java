@@ -119,10 +119,12 @@ public class DashboardFragment extends Fragment {
         View btnAdd = view.findViewById(R.id.btn_quick_add);
         View btnWallet = view.findViewById(R.id.btn_quick_wallet);
         View btnBudget = view.findViewById(R.id.btn_quick_budget);
+        View btnDebt = view.findViewById(R.id.btn_quick_debt);
 
         if (btnAdd != null) btnAdd.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.addTransactionFragment));
         if (btnWallet != null) btnWallet.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.nav_wallet));
         if (btnBudget != null) btnBudget.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.nav_budget));
+        if (btnDebt != null) btnDebt.setOnClickListener(v -> Navigation.findNavController(v).navigate(R.id.nav_debt_loan));
     }
 
     private void setupRecyclerViews() {

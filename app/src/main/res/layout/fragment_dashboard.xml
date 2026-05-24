@@ -184,7 +184,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_marginTop="24dp"
-                    android:weightSum="3">
+                    android:weightSum="4">
                     <LinearLayout
                         android:id="@+id/btn_quick_add"
                         android:layout_width="0dp"
@@ -267,6 +267,34 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Ngân sách"
+                            android:textSize="12sp"
+                            android:layout_marginTop="8dp" />
+                    </LinearLayout>
+                    <LinearLayout
+                        android:id="@+id/btn_quick_debt"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            app:cardCornerRadius="15dp"
+                            app:cardBackgroundColor="@color/surface_card">
+                            <ImageView
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/outline_article_person_24"
+                                app:tint="@color/icon_tint" />
+                        </com.google.android.material.card.MaterialCardView>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Vay &amp; Nợ"
                             android:textSize="12sp"
                             android:layout_marginTop="8dp" />
                     </LinearLayout>

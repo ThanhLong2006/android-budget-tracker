@@ -1,27 +1,30 @@
 package com.example.quanlychitieu;
 
-// Import các thư viện cần thiết cho Activity, giao diện và điều hướng
-import android.content.Context; // Cung cấp thông tin về môi trường ứng dụng
-import android.content.SharedPreferences; // Để truy cập dữ liệu lưu trữ nhỏ (như cài đặt ngôn ngữ, chế độ tối)
-import android.content.res.Configuration; // Để cấu hình lại tài nguyên hệ thống (ví dụ: ngôn ngữ)
-import android.content.res.Resources; // Cung cấp quyền truy cập vào tài nguyên của ứng dụng
-import android.os.Bundle; // Để truyền dữ liệu giữa các thành phần
-import android.view.View; // Lớp cơ sở cho tất cả các thành phần giao diện
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.os.Bundle;
+import android.view.View;
 
-import androidx.activity.EdgeToEdge; // Hỗ trợ hiển thị ứng dụng tràn viền
-import androidx.appcompat.app.AppCompatActivity; // Lớp cơ sở cho các Activity hỗ trợ thư viện AppCompat
-import androidx.appcompat.app.AppCompatDelegate; // Quản lý các chế độ giao diện (như chế độ tối)
-import androidx.core.graphics.Insets; // Đại diện cho các khoảng cách lề (padding/margin)
-import androidx.core.view.ViewCompat; // Cung cấp khả năng tương thích ngược cho các tính năng của View
-import androidx.navigation.NavController; // Điều khiển luồng điều hướng trong ứng dụng
-import androidx.navigation.fragment.NavHostFragment; // Fragment làm vật chứa cho các màn hình điều hướng
-import androidx.navigation.ui.NavigationUI; // Kết nối NavController với các thành phần UI như BottomNavigationView
-import androidx.core.view.WindowInsetsCompat; // Quản lý các phần lề của cửa sổ (như thanh trạng thái, thanh điều hướng)
+import androidx.activity.EdgeToEdge;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.navigation.NavController;
+import androidx.navigation.fragment.NavHostFragment;
+import androidx.navigation.ui.NavigationUI;
+import androidx.core.view.WindowInsetsCompat;
+import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkManager;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView; // Thanh điều hướng phía dưới
-import com.google.android.material.floatingactionbutton.FloatingActionButton; // Nút bấm nổi (Floating Action Button)
+import com.example.quanlychitieu.worker.RecurringWorker;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
-import java.util.Locale; // Định nghĩa ngôn ngữ và khu vực
+import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -46,6 +49,9 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
+        // Lập lịch chạy Giao dịch định kỳ (Chạy 1 lần mỗi ngày)
+        scheduleRecurringTasks();
+
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.nav_host_fragment);
         
@@ -61,13 +67,13 @@ public class MainActivity extends AppCompatActivity {
             });
 
             navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
-                // Ẩn nút FAB tiện ích ở màn hình khởi đầu và màn hình Ngân sách để tránh đè nút
-                if (destination.getId() == R.id.nav_start) {
+                int id = destination.getId();
+                if (id == R.id.nav_start || id == R.id.loginFragment || id == R.id.registerFragment) {
                     bottomNav.setVisibility(View.GONE);
                     fab.setVisibility(View.GONE);
-                } else if (destination.getId() == R.id.nav_budget) {
+                } else if (id == R.id.nav_budget || id == R.id.nav_debt_loan || id == R.id.nav_recurring) {
                     bottomNav.setVisibility(View.VISIBLE);
-                    fab.setVisibility(View.GONE); // Ẩn để hiện nút riêng của trang Ngân sách
+                    fab.setVisibility(View.GONE);
                 } else {
                     bottomNav.setVisibility(View.VISIBLE);
                     fab.setVisibility(View.VISIBLE);
@@ -80,6 +86,18 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
             return insets;
         });
+    }
+
+    private void scheduleRecurringTasks() {
+        PeriodicWorkRequest recurringWork =
+                new PeriodicWorkRequest.Builder(RecurringWorker.class, 1, TimeUnit.DAYS)
+                        .build();
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "RecurringTransactionWork",
+                ExistingPeriodicWorkPolicy.KEEP,
+                recurringWork
+        );
     }
 
     private void applyDarkMode() {

@@ -88,6 +88,9 @@
         <action
             android:id="@+id/action_nav_dashboard_to_nav_budget"
             app:destination="@id/nav_budget" />
+        <action
+            android:id="@+id/action_nav_dashboard_to_nav_debt_loan"
+            app:destination="@id/nav_debt_loan" />
     </fragment>
 
     <fragment
@@ -111,12 +114,17 @@
         android:name="com.example.quanlychitieu.SettingsFragment"
         android:label="Cài đặt"
         tools:layout="@layout/fragment_settings">
-        <!-- Thêm Action Đăng xuất: Chuyển về Login và xóa sạch Backstack để không thể quay lại trang Settings -->
         <action
             android:id="@+id/action_settings_to_login"
             app:destination="@id/loginFragment"
             app:popUpTo="@id/mobile_navigation"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_nav_settings_to_nav_debt_loan"
+            app:destination="@id/nav_debt_loan" />
+        <action
+            android:id="@+id/action_nav_settings_to_nav_recurring"
+            app:destination="@id/nav_recurring" />
     </fragment>
 
     <fragment
@@ -141,5 +149,17 @@
         android:name="com.example.quanlychitieu.BudgetFragment"
         android:label="Ngân sách"
         tools:layout="@layout/fragment_budget" />
+
+    <fragment
+        android:id="@+id/nav_debt_loan"
+        android:name="com.example.quanlychitieu.DebtLoanFragment"
+        android:label="Vay &amp; Nợ"
+        tools:layout="@layout/fragment_debt_loan" />
+
+    <fragment
+        android:id="@+id/nav_recurring"
+        android:name="com.example.quanlychitieu.RecurringTransactionFragment"
+        android:label="Định kỳ"
+        tools:layout="@layout/fragment_recurring_transaction" />
 
 </navigation>
