@@ -38,7 +38,7 @@ public class statisticalFragment extends Fragment {
     private BarChart barChart;
     private TextView tvSummaryTotal, tvMaxCategory, tabIncome, tabExpense;
     private TransactionDao transactionDao;
-    private String currentType = "INCOME"; // Mặc định ban đầu là Thu nhập
+    private String currentType = "INCOME";
     private String userId;
 
     public statisticalFragment() {}
@@ -52,8 +52,6 @@ public class statisticalFragment extends Fragment {
         
         setupCharts();
         setupListeners();
-        
-        // Cập nhật giao diện tab ngay khi khởi tạo
         updateTabUI();
         observeData();
 
@@ -111,18 +109,14 @@ public class statisticalFragment extends Fragment {
 
     private void updateTabUI() {
         if (currentType.equals("INCOME")) {
-            // Sáng đèn tab Thu nhập (Xanh)
             tabIncome.setBackgroundResource(R.color.xanhlanhat);
             tabIncome.setTextColor(Color.parseColor("#22C55E"));
-            // Tắt đèn tab Chi tiêu
             tabExpense.setBackgroundResource(android.R.color.transparent);
             tabExpense.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary));
             tvSummaryTotal.setTextColor(ContextCompat.getColor(requireContext(), R.color.income_green));
         } else {
-            // Sáng đèn tab Chi tiêu (Đỏ)
             tabExpense.setBackgroundResource(R.color.dohongnhat);
             tabExpense.setTextColor(Color.parseColor("#EF4444"));
-            // Tắt đèn tab Thu nhập
             tabIncome.setBackgroundResource(android.R.color.transparent);
             tabIncome.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary));
             tvSummaryTotal.setTextColor(ContextCompat.getColor(requireContext(), R.color.expense_red));
@@ -146,9 +140,10 @@ public class statisticalFragment extends Fragment {
             }
         });
 
-        transactionDao.getDailyStats(userId, currentType).observe(getViewLifecycleOwner(), dailyData -> {
-            if (dailyData != null && !dailyData.isEmpty()) {
-                updateBarChart(dailyData);
+        // Cập nhật biểu đồ xu hướng (So sánh Thu vs Chi)
+        transactionDao.getTrendStats(userId).observe(getViewLifecycleOwner(), trendData -> {
+            if (trendData != null && !trendData.isEmpty()) {
+                updateTrendChart(trendData);
             } else {
                 barChart.clear();
             }
@@ -157,44 +152,60 @@ public class statisticalFragment extends Fragment {
 
     private void updatePieChart(List<TransactionDao.CategoryStats> stats) {
         ArrayList<PieEntry> entries = new ArrayList<>();
+        ArrayList<Integer> colors = new ArrayList<>();
         for (TransactionDao.CategoryStats stat : stats) {
             entries.add(new PieEntry((float) stat.totalAmount, stat.categoryName));
+            if (stat.categoryColor != null) {
+                try { colors.add(Color.parseColor(stat.categoryColor)); } 
+                catch (Exception e) { colors.add(ColorTemplate.MATERIAL_COLORS[entries.size() % ColorTemplate.MATERIAL_COLORS.length]); }
+            }
         }
 
         PieDataSet dataSet = new PieDataSet(entries, "");
-        dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+        if (colors.isEmpty()) dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
+        else dataSet.setColors(colors);
+        
         dataSet.setSliceSpace(3f);
         dataSet.setSelectionShift(5f);
 
         PieData data = new PieData(dataSet);
         data.setValueTextSize(11f);
-        data.setValueTextColor(Color.DKGRAY);
+        data.setValueTextColor(Color.WHITE);
 
         pieChart.setData(data);
         pieChart.animateY(1000);
         pieChart.invalidate();
     }
 
-    private void updateBarChart(List<TransactionDao.ChartData> dailyData) {
-        ArrayList<BarEntry> entries = new ArrayList<>();
+    private void updateTrendChart(List<TransactionDao.TrendData> trendData) {
+        ArrayList<BarEntry> incomeEntries = new ArrayList<>();
+        ArrayList<BarEntry> expenseEntries = new ArrayList<>();
         ArrayList<String> labels = new ArrayList<>();
 
-        for (int i = 0; i < dailyData.size(); i++) {
-            entries.add(new BarEntry(i, (float) dailyData.get(i).value));
-            labels.add(dailyData.get(i).label);
+        for (int i = 0; i < trendData.size(); i++) {
+            TransactionDao.TrendData data = trendData.get(i);
+            incomeEntries.add(new BarEntry(i, (float) data.incomeValue));
+            expenseEntries.add(new BarEntry(i, (float) data.expenseValue));
+            labels.add(data.label.substring(5)); // Chỉ lấy MM-DD
         }
 
-        BarDataSet dataSet = new BarDataSet(entries, currentType.equals("INCOME") ? "Thu nhập" : "Chi tiêu");
-        int color = currentType.equals("INCOME") ? 
-                ContextCompat.getColor(requireContext(), R.color.income_green) : 
-                ContextCompat.getColor(requireContext(), R.color.expense_red);
-        dataSet.setColor(color);
+        BarDataSet incomeSet = new BarDataSet(incomeEntries, "Thu nhập");
+        incomeSet.setColor(ContextCompat.getColor(requireContext(), R.color.income_green));
+        
+        BarDataSet expenseSet = new BarDataSet(expenseEntries, "Chi tiêu");
+        expenseSet.setColor(ContextCompat.getColor(requireContext(), R.color.expense_red));
 
-        BarData data = new BarData(dataSet);
-        data.setBarWidth(0.5f);
+        BarData data = new BarData(incomeSet, expenseSet);
+        data.setBarWidth(0.35f);
 
         barChart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(labels));
         barChart.setData(data);
+        
+        // Group bars
+        float groupSpace = 0.3f;
+        float barSpace = 0.05f;
+        barChart.groupBars(0f, groupSpace, barSpace);
+
         barChart.animateY(1000);
         barChart.invalidate();
     }

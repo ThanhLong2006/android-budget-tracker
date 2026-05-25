@@ -40,13 +40,15 @@ public interface TransactionDao {
     @Query("SELECT SUM(CASE WHEN type = 'INCOME' THEN amount ELSE -amount END) FROM `transaction` WHERE userId = :userId")
     LiveData<Double> getTotalBalance(String userId);
 
+    @Query("SELECT SUM(CASE WHEN type = 'INCOME' THEN amount ELSE -amount END) FROM `transaction` WHERE userId = :userId")
+    Double getTotalBalanceSync(String userId);
+
     @Query("SELECT SUM(amount) FROM `transaction` WHERE userId = :userId AND type = :type AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')")
     LiveData<Double> getMonthlyTotalByType(String userId, String type);
 
     @Query("SELECT SUM(amount) FROM `transaction` WHERE userId = :userId AND categoryID = :categoryId AND strftime('%m-%Y', date) = :month AND type = 'EXPENSE'")
     LiveData<Double> getCategoryTotalByMonth(String userId, int categoryId, String month);
 
-    // Truy vấn đồng bộ để kiểm tra ngân sách nhanh (Loại trừ ID hiện tại nếu là đang sửa)
     @Query("SELECT SUM(amount) FROM `transaction` WHERE userId = :userId AND categoryID = :categoryId AND strftime('%m-%Y', date) = :month AND id != :excludeId AND type = 'EXPENSE'")
     Double getCategoryTotalByMonthExcludeSync(String userId, int categoryId, String month, int excludeId);
 
@@ -66,6 +68,14 @@ public interface TransactionDao {
            "WHERE userId = :userId AND type = :type " +
            "GROUP BY date ORDER BY date ASC LIMIT 7")
     LiveData<List<ChartData>> getDailyStats(String userId, String type);
+
+    // Truy vấn mới: Lấy cả Thu và Chi để so sánh xu hướng
+    @Query("SELECT date as label, " +
+           "SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END) as incomeValue, " +
+           "SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END) as expenseValue " +
+           "FROM `transaction` WHERE userId = :userId " +
+           "GROUP BY date ORDER BY date DESC LIMIT 7")
+    LiveData<List<TrendData>> getTrendStats(String userId);
 
     @Query("SELECT * FROM `transaction` WHERE userId = :userId")
     List<Transaction> getAllTransactionsSync(String userId);
@@ -93,5 +103,11 @@ public interface TransactionDao {
     public static class ChartData {
         public String label;
         public double value;
+    }
+
+    public static class TrendData {
+        public String label;
+        public double incomeValue;
+        public double expenseValue;
     }
 }

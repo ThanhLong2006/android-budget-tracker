@@ -1,49 +1,64 @@
 package com.example.quanlychitieu;
 
-// Import các thư viện Android, giao diện Material và Firebase cần thiết
-import android.app.AlertDialog; // Thư viện hiển thị hộp thoại lựa chọn
-import android.app.DatePickerDialog; // Hộp thoại chọn ngày tháng năm
-import android.content.res.ColorStateList; // Quản lý danh sách màu theo trạng thái (như sáng/tối)
-import android.graphics.Color; // Thư viện xử lý mã màu sắc (Hex, RGB)
-import android.os.Bundle; // Đối tượng đóng gói dữ liệu truyền giữa các Fragment
-import android.view.LayoutInflater; // Chuyển đổi file XML layout thành đối tượng View trong Java
-import android.view.View; // Lớp cơ sở cho mọi thành phần giao diện
-import android.view.ViewGroup; // Lớp chứa các View khác (Container)
-import android.widget.Button; // Thành phần nút bấm
-import android.widget.EditText; // Ô nhập liệu văn bản/số
-import android.widget.ImageView; // Thành phần hiển thị hình ảnh/biểu tượng
-import android.widget.RadioGroup; // Nhóm các nút chọn duy nhất (RadioButton)
-import android.widget.TextView; // Thành phần hiển thị văn bản tĩnh/động
-import android.widget.Toast; // Hiển thị thông báo nhanh (Pop-up)
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.DatePickerDialog;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.RadioGroup;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.NonNull; // Ràng buộc tham số không được null
-import androidx.annotation.Nullable; // Cho phép tham số có thể null
-import androidx.core.content.ContextCompat; // Lấy màu sắc/tài nguyên an toàn từ Context
-import androidx.fragment.app.Fragment; // Mảnh giao diện tái sử dụng và quản lý linh hoạt
-import androidx.navigation.Navigation; // Thư viện điều hướng chuẩn Android Jetpack
-import androidx.recyclerview.widget.GridLayoutManager; // Bố cục lưới cho Icon Picker
-import androidx.recyclerview.widget.LinearLayoutManager; // Bố cục hàng dọc cho danh sách chọn
-import androidx.recyclerview.widget.RecyclerView; // Hiển thị danh sách dữ liệu lớn hiệu quả
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.fragment.app.Fragment;
+import androidx.navigation.Navigation;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.quanlychitieu.data.database.AppDatabase; // Khởi tạo Room Database cục bộ
-import com.example.quanlychitieu.data.entities.Account; // Thực thể Tài khoản (Ví)
-import com.example.quanlychitieu.data.entities.Budget; // Thực thể Ngân sách
-import com.example.quanlychitieu.data.entities.Category; // Thực thể Danh mục
-import com.example.quanlychitieu.data.entities.Transaction; // Thực thể Giao dịch
-import com.google.android.material.button.MaterialButtonToggleGroup; // Nút gạt chọn Thu nhập/Chi tiêu
-import com.google.firebase.auth.FirebaseAuth; // Quản lý xác thực người dùng từ Firebase
+import com.example.quanlychitieu.data.database.AppDatabase;
+import com.example.quanlychitieu.data.entities.Account;
+import com.example.quanlychitieu.data.entities.Budget;
+import com.example.quanlychitieu.data.entities.Category;
+import com.example.quanlychitieu.data.entities.Transaction;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.NumberFormat;
-import java.text.SimpleDateFormat; // Định dạng hiển thị ngày tháng
-import java.util.ArrayList; // Danh sách mảng động
-import java.util.Arrays; // Công cụ thao tác với mảng cố định
-import java.util.Calendar; // Quản lý thời gian hệ thống
-import java.util.List; // Giao diện danh sách chuẩn
-import java.util.Locale; // Cài đặt ngôn ngữ hiển thị (VN)
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-/**
- * AddTransactionFragment: Màn hình thêm mới/chỉnh sửa giao dịch và danh mục.
- */
 public class AddTransactionFragment extends Fragment {
 
     private EditText etAmount, etNote;
@@ -51,7 +66,7 @@ public class AddTransactionFragment extends Fragment {
     private ImageView ivCategoryIcon;
     private MaterialButtonToggleGroup toggleType;
     private Button btnSave;
-    private View btnSelectDate, btnSelectCategory, btnSelectAccount, btnClose;
+    private View btnSelectDate, btnSelectCategory, btnSelectAccount, btnClose, btnScan;
 
     private Calendar calendar = Calendar.getInstance();
     private String selectedType = "EXPENSE";
@@ -66,7 +81,34 @@ public class AddTransactionFragment extends Fragment {
     private List<Category> incomeCategories = new ArrayList<>();
     private List<Category> expenseCategories = new ArrayList<>();
 
+    private Uri photoUri;
+    private ActivityResultLauncher<Uri> takePhotoLauncher;
+    private ActivityResultLauncher<String> requestPermissionLauncher;
+
     public AddTransactionFragment() {}
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // Khởi tạo trình chụp ảnh
+        takePhotoLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
+            if (success && photoUri != null) {
+                processReceiptImage(photoUri);
+            }
+        });
+
+        // Khởi tạo trình yêu cầu quyền
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isChecked(isGranted)) {
+                openCamera();
+            } else {
+                Toast.makeText(getContext(), "Cần quyền Camera để quét hóa đơn", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private boolean isChecked(Boolean bool) { return bool != null && bool; }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -101,6 +143,7 @@ public class AddTransactionFragment extends Fragment {
         btnSelectCategory = view.findViewById(R.id.btn_select_category);
         btnSelectAccount = view.findViewById(R.id.btn_select_account);
         btnClose = view.findViewById(R.id.btn_close);
+        btnScan = view.findViewById(R.id.btn_scan_receipt);
     }
 
     private void setupUI() {
@@ -131,6 +174,67 @@ public class AddTransactionFragment extends Fragment {
         btnSelectCategory.setOnClickListener(v -> showCategorySelectionDialog());
         btnSelectAccount.setOnClickListener(v -> showAccountSelectionDialog());
         btnSave.setOnClickListener(v -> validateAndSave());
+        
+        btnScan.setOnClickListener(v -> {
+            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                openCamera();
+            } else {
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+            }
+        });
+    }
+
+    private void openCamera() {
+        try {
+            File photoFile = File.createTempFile("receipt_", ".jpg", requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES));
+            photoUri = FileProvider.getUriForFile(requireContext(), "com.example.quanlychitieu.fileprovider", photoFile);
+            takePhotoLauncher.launch(photoUri);
+        } catch (IOException e) {
+            Toast.makeText(getContext(), "Lỗi khởi tạo Camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void processReceiptImage(Uri uri) {
+        try {
+            InputImage image = InputImage.fromFilePath(requireContext(), uri);
+            TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+            
+            Toast.makeText(getContext(), "Đang phân tích hóa đơn...", Toast.LENGTH_SHORT).show();
+            
+            recognizer.process(image)
+                    .addOnSuccessListener(visionText -> {
+                        String resultText = visionText.getText();
+                        extractAmountFromText(resultText);
+                    })
+                    .addOnFailureListener(e -> Toast.makeText(getContext(), "Không thể nhận diện văn bản", Toast.LENGTH_SHORT).show());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void extractAmountFromText(String text) {
+        // Tìm các chuỗi có định dạng số tiền (VD: 50.000, 1.200.000, 150000)
+        Pattern pattern = Pattern.compile("(\\d{1,3}([.,]\\d{3})*|\\d+)");
+        Matcher matcher = pattern.matcher(text);
+        
+        double maxAmount = 0;
+        while (matcher.find()) {
+            try {
+                String clean = matcher.group().replace(".", "").replace(",", "");
+                double val = Double.parseDouble(clean);
+                // Thường tổng tiền là số lớn nhất trên hóa đơn
+                if (val > maxAmount && val < 1000000000) { // Giới hạn 1 tỷ để tránh rác
+                    maxAmount = val;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (maxAmount > 0) {
+            etAmount.setText(String.valueOf((int)maxAmount));
+            Toast.makeText(getContext(), "Đã tìm thấy số tiền: " + formatCurrency(maxAmount), Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(getContext(), "Không tìm thấy số tiền rõ ràng", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateToggleColors(int checkedId) {
@@ -317,11 +421,9 @@ public class AddTransactionFragment extends Fragment {
         final String userId = FirebaseAuth.getInstance().getUid();
         final AppDatabase db = AppDatabase.getDatabase(requireContext());
 
-        // Kiểm tra ngân sách ở luồng nền
         AppDatabase.databaseWriteExecutor.execute(() -> {
             Budget budget = db.budgetDao().getBudgetSync(userId, selectedCategoryId, month);
             if (budget != null && "EXPENSE".equals(selectedType)) {
-                // Lấy tổng chi tiêu hiện tại (trừ đi chính giao dịch này nếu đang sửa)
                 Double currentSpent = db.transactionDao().getCategoryTotalByMonthExcludeSync(userId, selectedCategoryId, month, transactionId);
                 double totalAfter = (currentSpent != null ? currentSpent : 0.0) + amount;
 
@@ -337,7 +439,6 @@ public class AddTransactionFragment extends Fragment {
                     return;
                 }
             }
-            // Nếu không có ngân sách hoặc còn dư nhiều, tiến hành lưu luôn
             performSave(amount, note, date);
         });
     }
@@ -374,6 +475,8 @@ public class AddTransactionFragment extends Fragment {
         if (transactionId == -1) db.transactionDao().insert(transaction);
         else db.transactionDao().update(transaction);
         
+        BalanceWidget.updateWidget(requireContext());
+
         if (getActivity() != null) {
             getActivity().runOnUiThread(() -> Navigation.findNavController(requireView()).navigateUp());
         }

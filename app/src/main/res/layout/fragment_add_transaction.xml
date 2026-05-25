@@ -6,7 +6,7 @@
     android:orientation="vertical"
     android:background="@color/white">
 
-    <!-- Header với nút đóng và lưu -->
+    <!-- Header với nút đóng, quét và tiêu đề -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -20,6 +20,7 @@
             android:src="@drawable/ic_arrow"
             android:rotation="-90"
             app:tint="@color/white" />
+
         <TextView
             android:id="@+id/tv_title"
             android:layout_width="wrap_content"
@@ -29,6 +30,16 @@
             android:textSize="18sp"
             android:textStyle="bold"
             android:textColor="@color/white" />
+
+        <ImageButton
+            android:id="@+id/btn_scan_receipt"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_alignParentEnd="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/outline_manage_search_24"
+            app:tint="@color/white"
+            android:contentDescription="Quét hóa đơn" />
     </RelativeLayout>
 
     <androidx.core.widget.NestedScrollView

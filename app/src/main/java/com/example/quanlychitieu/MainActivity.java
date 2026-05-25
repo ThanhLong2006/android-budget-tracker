@@ -5,10 +5,14 @@ import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.navigation.NavController;
@@ -24,9 +28,12 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.Locale;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
+
+    private boolean isAuthenticated = false;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -49,7 +56,9 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
 
-        // Lập lịch chạy Giao dịch định kỳ (Chạy 1 lần mỗi ngày)
+        // Kiểm tra bảo mật vân tay nếu được bật
+        checkBiometricSecurity();
+
         scheduleRecurringTasks();
 
         NavHostFragment navHostFragment = (NavHostFragment) getSupportFragmentManager()
@@ -65,6 +74,10 @@ public class MainActivity extends AppCompatActivity {
             fab.setOnClickListener(v -> {
                 navController.navigate(R.id.addTransactionFragment);
             });
+
+            if (getIntent().getBooleanExtra("OPEN_ADD_TRANSACTION", false)) {
+                navController.navigate(R.id.addTransactionFragment);
+            }
 
             navController.addOnDestinationChangedListener((controller, destination, arguments) -> {
                 int id = destination.getId();
@@ -86,6 +99,52 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
             return insets;
         });
+    }
+
+    private void checkBiometricSecurity() {
+        SharedPreferences prefs = getSharedPreferences("wealthflow_prefs", Context.MODE_PRIVATE);
+        boolean isBiometricEnabled = prefs.getBoolean("biometric_enabled", false);
+
+        if (isBiometricEnabled && !isAuthenticated) {
+            // Ẩn nội dung app cho đến khi xác thực xong
+            findViewById(R.id.main).setVisibility(View.INVISIBLE);
+            showBiometricPrompt();
+        }
+    }
+
+    private void showBiometricPrompt() {
+        Executor executor = ContextCompat.getMainExecutor(this);
+        BiometricPrompt biometricPrompt = new BiometricPrompt(MainActivity.this,
+                executor, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                isAuthenticated = true;
+                findViewById(R.id.main).setVisibility(View.VISIBLE);
+                Toast.makeText(getApplicationContext(), "Xác thực thành công", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                Toast.makeText(getApplicationContext(), "Xác thực lỗi: " + errString, Toast.LENGTH_SHORT).show();
+                finish(); // Đóng app nếu xác thực lỗi/hủy
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                Toast.makeText(getApplicationContext(), "Xác thực thất bại", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Khóa ứng dụng")
+                .setSubtitle("Xác thực để tiếp tục sử dụng WealthFlow")
+                .setNegativeButtonText("Thoát")
+                .build();
+
+        biometricPrompt.authenticate(promptInfo);
     }
 
     private void scheduleRecurringTasks() {
