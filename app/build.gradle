@@ -39,6 +39,7 @@ dependencies {
     implementation platform(libs.firebase.bom)
     implementation libs.firebase.auth
     implementation libs.firebase.firestore
+    implementation 'com.google.firebase:firebase-storage'
 
     // Navigation Component
     implementation libs.navigation.runtime
@@ -71,6 +72,13 @@ dependencies {
 
     // Google ML Kit for OCR (Receipt Scanning)
     implementation 'com.google.android.gms:play-services-mlkit-text-recognition:19.0.1'
+
+    // CSV Export
+    implementation 'com.opencsv:opencsv:5.7.1'
+
+    // Glide for image loading
+    implementation 'com.github.bumptech.glide:glide:4.16.0'
+    annotationProcessor 'com.github.bumptech.glide:compiler:4.16.0'
 
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit

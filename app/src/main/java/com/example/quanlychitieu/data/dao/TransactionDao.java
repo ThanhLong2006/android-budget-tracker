@@ -89,6 +89,7 @@ public interface TransactionDao {
         public String date;
         public String type;
         public String note;
+        public String imageUrl;
         public String categoryName;
         public String categoryIcon;
         public String categoryColor;

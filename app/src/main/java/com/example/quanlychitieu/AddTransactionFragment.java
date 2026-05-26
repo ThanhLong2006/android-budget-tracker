@@ -1,17 +1,14 @@
 package com.example.quanlychitieu;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +31,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.quanlychitieu.data.database.AppDatabase;
 import com.example.quanlychitieu.data.entities.Account;
 import com.example.quanlychitieu.data.entities.Budget;
@@ -41,6 +39,8 @@ import com.example.quanlychitieu.data.entities.Category;
 import com.example.quanlychitieu.data.entities.Transaction;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
@@ -53,9 +53,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -63,16 +63,18 @@ public class AddTransactionFragment extends Fragment {
 
     private EditText etAmount, etNote;
     private TextView tvDate, tvCategoryName, tvAccountName, tvTitle;
-    private ImageView ivCategoryIcon;
+    private ImageView ivCategoryIcon, ivReceiptPreview;
     private MaterialButtonToggleGroup toggleType;
     private Button btnSave;
-    private View btnSelectDate, btnSelectCategory, btnSelectAccount, btnClose, btnScan;
+    private View btnSelectDate, btnSelectCategory, btnSelectAccount, btnClose, btnScan, containerReceipt, btnRemoveImage;
 
     private Calendar calendar = Calendar.getInstance();
     private String selectedType = "EXPENSE";
     private int selectedCategoryId = -1;
     private int selectedAccountId = -1;
     private int transactionId = -1;
+    private Uri localImageUri = null;
+    private String existingImageUrl = null;
 
     private String currentPickingIcon = "outline_article_person_24";
     private String currentPickingColor = "#3B82F6";
@@ -81,8 +83,8 @@ public class AddTransactionFragment extends Fragment {
     private List<Category> incomeCategories = new ArrayList<>();
     private List<Category> expenseCategories = new ArrayList<>();
 
-    private Uri photoUri;
     private ActivityResultLauncher<Uri> takePhotoLauncher;
+    private ActivityResultLauncher<String> pickImageLauncher;
     private ActivityResultLauncher<String> requestPermissionLauncher;
 
     public AddTransactionFragment() {}
@@ -91,24 +93,25 @@ public class AddTransactionFragment extends Fragment {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-        // Khởi tạo trình chụp ảnh
         takePhotoLauncher = registerForActivityResult(new ActivityResultContracts.TakePicture(), success -> {
-            if (success && photoUri != null) {
-                processReceiptImage(photoUri);
+            if (success && localImageUri != null) {
+                showImagePreview(localImageUri);
+                processReceiptImage(localImageUri);
             }
         });
 
-        // Khởi tạo trình yêu cầu quyền
-        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
-            if (isChecked(isGranted)) {
-                openCamera();
-            } else {
-                Toast.makeText(getContext(), "Cần quyền Camera để quét hóa đơn", Toast.LENGTH_SHORT).show();
+        pickImageLauncher = registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
+            if (uri != null) {
+                localImageUri = uri;
+                showImagePreview(uri);
             }
+        });
+
+        requestPermissionLauncher = registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+            if (isGranted) openCamera();
+            else Toast.makeText(getContext(), "Cần quyền Camera", Toast.LENGTH_SHORT).show();
         });
     }
-
-    private boolean isChecked(Boolean bool) { return bool != null && bool; }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -124,9 +127,7 @@ public class AddTransactionFragment extends Fragment {
         }
         setupUI();
         observeData();
-        if (transactionId != -1) {
-            loadTransactionData();
-        }
+        if (transactionId != -1) loadTransactionData();
     }
 
     private void initViews(View view) {
@@ -144,6 +145,9 @@ public class AddTransactionFragment extends Fragment {
         btnSelectAccount = view.findViewById(R.id.btn_select_account);
         btnClose = view.findViewById(R.id.btn_close);
         btnScan = view.findViewById(R.id.btn_scan_receipt);
+        ivReceiptPreview = view.findViewById(R.id.iv_receipt_preview);
+        containerReceipt = view.findViewById(R.id.container_receipt_image);
+        btnRemoveImage = view.findViewById(R.id.btn_remove_image);
     }
 
     private void setupUI() {
@@ -165,10 +169,6 @@ public class AddTransactionFragment extends Fragment {
             if (isChecked) {
                 selectedType = (checkedId == R.id.btn_type_income) ? "INCOME" : "EXPENSE";
                 updateToggleColors(checkedId);
-                selectedCategoryId = -1;
-                tvCategoryName.setText("Chọn danh mục");
-                ivCategoryIcon.setImageResource(R.drawable.outline_add_shopping_cart_24);
-                ivCategoryIcon.setBackgroundTintList(null);
             }
         });
         btnSelectCategory.setOnClickListener(v -> showCategorySelectionDialog());
@@ -176,64 +176,61 @@ public class AddTransactionFragment extends Fragment {
         btnSave.setOnClickListener(v -> validateAndSave());
         
         btnScan.setOnClickListener(v -> {
-            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
-                openCamera();
-            } else {
-                requestPermissionLauncher.launch(Manifest.permission.CAMERA);
-            }
+            String[] options = {"Chụp ảnh hóa đơn", "Chọn từ thư viện"};
+            new AlertDialog.Builder(getContext())
+                    .setTitle("Đính kèm hóa đơn")
+                    .setItems(options, (dialog, which) -> {
+                        if (which == 0) {
+                            if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) openCamera();
+                            else requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+                        } else pickImageLauncher.launch("image/*");
+                    }).show();
+        });
+
+        btnRemoveImage.setOnClickListener(v -> {
+            localImageUri = null;
+            existingImageUrl = null;
+            containerReceipt.setVisibility(View.GONE);
         });
     }
 
     private void openCamera() {
         try {
             File photoFile = File.createTempFile("receipt_", ".jpg", requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES));
-            photoUri = FileProvider.getUriForFile(requireContext(), "com.example.quanlychitieu.fileprovider", photoFile);
-            takePhotoLauncher.launch(photoUri);
+            localImageUri = FileProvider.getUriForFile(requireContext(), "com.example.quanlychitieu.fileprovider", photoFile);
+            takePhotoLauncher.launch(localImageUri);
         } catch (IOException e) {
-            Toast.makeText(getContext(), "Lỗi khởi tạo Camera", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Lỗi Camera", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void showImagePreview(Uri uri) {
+        containerReceipt.setVisibility(View.VISIBLE);
+        Glide.with(this).load(uri).into(ivReceiptPreview);
     }
 
     private void processReceiptImage(Uri uri) {
         try {
             InputImage image = InputImage.fromFilePath(requireContext(), uri);
             TextRecognizer recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
-            
-            Toast.makeText(getContext(), "Đang phân tích hóa đơn...", Toast.LENGTH_SHORT).show();
-            
-            recognizer.process(image)
-                    .addOnSuccessListener(visionText -> {
-                        String resultText = visionText.getText();
-                        extractAmountFromText(resultText);
-                    })
-                    .addOnFailureListener(e -> Toast.makeText(getContext(), "Không thể nhận diện văn bản", Toast.LENGTH_SHORT).show());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            recognizer.process(image).addOnSuccessListener(visionText -> extractAmountFromText(visionText.getText()));
+        } catch (IOException ignored) {}
     }
 
     private void extractAmountFromText(String text) {
-        // Tìm các chuỗi có định dạng số tiền (VD: 50.000, 1.200.000, 150000)
         Pattern pattern = Pattern.compile("(\\d{1,3}([.,]\\d{3})*|\\d+)");
         Matcher matcher = pattern.matcher(text);
-        
         double maxAmount = 0;
         while (matcher.find()) {
             try {
                 String clean = matcher.group().replace(".", "").replace(",", "");
                 double val = Double.parseDouble(clean);
-                // Thường tổng tiền là số lớn nhất trên hóa đơn
-                if (val > maxAmount && val < 1000000000) { // Giới hạn 1 tỷ để tránh rác
-                    maxAmount = val;
-                }
+                if (val > maxAmount && val < 1000000000) maxAmount = val;
             } catch (Exception ignored) {}
         }
-
         if (maxAmount > 0) {
             etAmount.setText(String.valueOf((int)maxAmount));
-            Toast.makeText(getContext(), "Đã tìm thấy số tiền: " + formatCurrency(maxAmount), Toast.LENGTH_LONG).show();
-        } else {
-            Toast.makeText(getContext(), "Không tìm thấy số tiền rõ ràng", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Đã nhận diện số tiền: " + formatCurrency(maxAmount), Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -257,55 +254,93 @@ public class AddTransactionFragment extends Fragment {
         String userId = FirebaseAuth.getInstance().getUid();
         AppDatabase db = AppDatabase.getDatabase(requireContext());
         db.accountDao().getAllAccounts(userId).observe(getViewLifecycleOwner(), accounts -> {
-            if (accounts != null) {
+            if (accounts != null && !accounts.isEmpty()) {
                 accountList = accounts;
-                if (selectedAccountId == -1 && !accounts.isEmpty() && transactionId == -1) {
+                if (selectedAccountId == -1 && transactionId == -1) {
                     selectedAccountId = accounts.get(0).getId();
                     tvAccountName.setText(accounts.get(0).getName());
                 }
             }
         });
-        db.categoryDao().getCategoriesByType(userId, "INCOME").observe(getViewLifecycleOwner(), categories -> {
-            if (categories != null) incomeCategories = categories;
-        });
-        db.categoryDao().getCategoriesByType(userId, "EXPENSE").observe(getViewLifecycleOwner(), categories -> {
-            if (categories != null) expenseCategories = categories;
-        });
+        db.categoryDao().getCategoriesByType(userId, "INCOME").observe(getViewLifecycleOwner(), categories -> { if (categories != null) incomeCategories = categories; });
+        db.categoryDao().getCategoriesByType(userId, "EXPENSE").observe(getViewLifecycleOwner(), categories -> { if (categories != null) expenseCategories = categories; });
     }
 
     private void loadTransactionData() {
         AppDatabase db = AppDatabase.getDatabase(requireContext());
-        db.transactionDao().getTransactionById(transactionId)
-                .observe(getViewLifecycleOwner(), transaction -> {
-                    if (transaction != null) {
-                        tvTitle.setText("Sửa giao dịch");
-                        etAmount.setText(String.valueOf((int)transaction.getAmount()));
-                        etNote.setText(transaction.getNote());
-                        selectedType = transaction.getType();
-                        selectedCategoryId = transaction.getCategoryID();
-                        selectedAccountId = transaction.getAccountId();
-                        int checkedId = ("INCOME".equals(selectedType)) ? R.id.btn_type_income : R.id.btn_type_expense;
-                        toggleType.check(checkedId);
-                        updateToggleColors(checkedId);
-                        try {
-                            calendar.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(transaction.getDate()));
-                            updateDateLabel();
-                        } catch (Exception e) {}
-                        db.categoryDao().getCategoryById(selectedCategoryId)
-                                .observe(getViewLifecycleOwner(), category -> {
-                                    if (category != null) {
-                                        tvCategoryName.setText(category.getName());
-                                        if (category.getColor() != null) {
-                                            ivCategoryIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(category.getColor())));
-                                        }
-                                    }
-                                });
-                        db.accountDao().getAccountById(selectedAccountId)
-                                .observe(getViewLifecycleOwner(), account -> {
-                                    if (account != null) tvAccountName.setText(account.getName());
-                                });
-                    }
-                });
+        db.transactionDao().getTransactionById(transactionId).observe(getViewLifecycleOwner(), transaction -> {
+            if (transaction != null) {
+                tvTitle.setText("Sửa giao dịch");
+                etAmount.setText(String.valueOf((int)transaction.getAmount()));
+                etNote.setText(transaction.getNote());
+                selectedType = transaction.getType();
+                selectedCategoryId = transaction.getCategoryID();
+                selectedAccountId = transaction.getAccountId();
+                existingImageUrl = transaction.getImageUrl();
+                if (existingImageUrl != null) {
+                    containerReceipt.setVisibility(View.VISIBLE);
+                    Glide.with(this).load(existingImageUrl).into(ivReceiptPreview);
+                }
+                toggleType.check(selectedType.equals("INCOME") ? R.id.btn_type_income : R.id.btn_type_expense);
+                updateToggleColors(selectedType.equals("INCOME") ? R.id.btn_type_income : R.id.btn_type_expense);
+                try {
+                    calendar.setTime(new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(transaction.getDate()));
+                    updateDateLabel();
+                } catch (Exception ignored) {}
+                db.categoryDao().getCategoryById(selectedCategoryId).observe(getViewLifecycleOwner(), c -> { if (c != null) { tvCategoryName.setText(c.getName()); ivCategoryIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(c.getColor()))); } });
+                db.accountDao().getAccountById(selectedAccountId).observe(getViewLifecycleOwner(), a -> { if (a != null) tvAccountName.setText(a.getName()); });
+            }
+        });
+    }
+
+    private void validateAndSave() {
+        String amountStr = etAmount.getText().toString().trim();
+        if (amountStr.isEmpty() || selectedCategoryId == -1 || selectedAccountId == -1) {
+            Toast.makeText(getContext(), "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        double amount = Double.parseDouble(amountStr);
+        String note = etNote.getText().toString();
+        String date = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.getTime());
+
+        if (localImageUri != null) {
+            uploadImageAndSave(amount, note, date);
+        } else {
+            performSave(amount, note, date, existingImageUrl);
+        }
+    }
+
+    private void uploadImageAndSave(double amount, String note, String date) {
+        Toast.makeText(getContext(), "Đang tải ảnh...", Toast.LENGTH_SHORT).show();
+        StorageReference ref = FirebaseStorage.getInstance().getReference().child("receipts/" + UUID.randomUUID().toString());
+        ref.putFile(localImageUri).addOnSuccessListener(taskSnapshot -> ref.getDownloadUrl().addOnSuccessListener(uri -> {
+            performSave(amount, note, date, uri.toString());
+        })).addOnFailureListener(e -> {
+            Toast.makeText(getContext(), "Lỗi tải ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            performSave(amount, note, date, null);
+        });
+    }
+
+    private void performSave(double amount, String note, String date, String imageUrl) {
+        String userId = FirebaseAuth.getInstance().getUid();
+        AppDatabase db = AppDatabase.getDatabase(requireContext());
+        Transaction t = new Transaction();
+        if (transactionId != -1) t.setId(transactionId);
+        t.setAmount(amount);
+        t.setType(selectedType);
+        t.setAccountId(selectedAccountId);
+        t.setCategoryID(selectedCategoryId);
+        t.setNote(note);
+        t.setDate(date);
+        t.setUserId(userId);
+        t.setImageUrl(imageUrl);
+        
+        AppDatabase.databaseWriteExecutor.execute(() -> {
+            if (transactionId == -1) db.transactionDao().insert(t);
+            else db.transactionDao().update(t);
+            BalanceWidget.updateWidget(requireContext());
+            if (getActivity() != null) getActivity().runOnUiThread(() -> Navigation.findNavController(requireView()).navigateUp());
+        });
     }
 
     private void showCategorySelectionDialog() {
@@ -317,88 +352,17 @@ public class AddTransactionFragment extends Fragment {
         CategoryAdapter adapter = new CategoryAdapter(category -> {
             selectedCategoryId = category.getId();
             tvCategoryName.setText(category.getName());
-            if (category.getColor() != null) {
-                ivCategoryIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(category.getColor())));
-            }
+            ivCategoryIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(category.getColor())));
             dialog.dismiss();
         });
         rvCategories.setAdapter(adapter);
-        if ("INCOME".equals(selectedType)) {
-            toggleFilter.check(R.id.btn_filter_income);
-            adapter.setCategories(incomeCategories);
-        } else {
-            toggleFilter.check(R.id.btn_filter_expense);
-            adapter.setCategories(expenseCategories);
-        }
-        toggleFilter.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-            if (isChecked) {
-                if (checkedId == R.id.btn_filter_income) adapter.setCategories(incomeCategories);
-                else adapter.setCategories(expenseCategories);
-            }
-        });
-        dialogView.findViewById(R.id.btn_add_custom_category).setOnClickListener(v -> {
-            dialog.dismiss();
-            showAddCategoryDialog();
-        });
+        toggleFilter.check("INCOME".equals(selectedType) ? R.id.btn_filter_income : R.id.btn_filter_expense);
+        adapter.setCategories("INCOME".equals(selectedType) ? incomeCategories : expenseCategories);
+        toggleFilter.addOnButtonCheckedListener((group, checkedId, isChecked) -> { if (isChecked) adapter.setCategories(checkedId == R.id.btn_filter_income ? incomeCategories : expenseCategories); });
         dialog.show();
-    }
-
-    private void showAddCategoryDialog() {
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_category, null);
-        EditText etName = dialogView.findViewById(R.id.et_category_name);
-        RadioGroup rgType = dialogView.findViewById(R.id.rg_category_type);
-        ImageView ivIconPreview = dialogView.findViewById(R.id.iv_selected_icon);
-        View btnPickIcon = dialogView.findViewById(R.id.btn_pick_icon);
-        currentPickingIcon = "outline_article_person_24";
-        currentPickingColor = "#3B82F6";
-        ivIconPreview.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(currentPickingColor)));
-        btnPickIcon.setOnClickListener(v -> showIconPickerDialog(ivIconPreview));
-        new AlertDialog.Builder(requireContext())
-                .setTitle("Thêm danh mục mới")
-                .setView(dialogView)
-                .setPositiveButton("Thêm", (dialog, which) -> {
-                    String name = etName.getText().toString().trim();
-                    if (name.isEmpty()) return;
-                    String type = (rgType.getCheckedRadioButtonId() == R.id.rb_type_income) ? "INCOME" : "EXPENSE";
-                    Category category = new Category();
-                    category.setName(name);
-                    category.setType(type);
-                    category.setIcon(currentPickingIcon);
-                    category.setColor(currentPickingColor);
-                    category.setUserId(FirebaseAuth.getInstance().getUid());
-                    AppDatabase.databaseWriteExecutor.execute(() -> {
-                        AppDatabase.getDatabase(requireContext()).categoryDao().insert(category);
-                    });
-                })
-                .setNegativeButton("Hủy", null)
-                .show();
-    }
-
-    private void showIconPickerDialog(ImageView preview) {
-        String[] icons = {"baseline_coffee_24", "outline_directions_car_24", "outline_account_balance_24", "outline_add_shopping_cart_24", "outline_bolt_24", "outline_article_person_24", "outline_calendar_month_24", "outline_account_balance_wallet_24", "baseline_home_24", "baseline_history_24"};
-        String[] colors = {"#FF9800", "#2196F3", "#9C27B0", "#E91E63", "#4CAF50", "#00BCD4", "#F44336", "#607D8B", "#FF5722", "#795548"};
-        View pickerView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_icon_picker, null);
-        AlertDialog dialog = new AlertDialog.Builder(requireContext()).setView(pickerView).create();
-        RecyclerView rvIcons = pickerView.findViewById(R.id.rv_icons);
-        rvIcons.setLayoutManager(new GridLayoutManager(requireContext(), 4));
-        IconAdapter iconAdapter = new IconAdapter(Arrays.asList(icons), Arrays.asList(colors), (icon, color) -> {
-            currentPickingIcon = icon;
-            currentPickingColor = color;
-            int resId = getResources().getIdentifier(icon, "drawable", requireContext().getPackageName());
-            if (resId != 0) preview.setImageResource(resId);
-            preview.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor(color)));
-            dialog.dismiss();
-        });
-        rvIcons.setAdapter(iconAdapter);
-        dialog.show();
-    }
-
-    private void updateDateLabel() {
-        tvDate.setText(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.getTime()));
     }
 
     private void showAccountSelectionDialog() {
-        if (accountList.isEmpty()) return;
         String[] names = new String[accountList.size()];
         for (int i = 0; i < accountList.size(); i++) names[i] = accountList.get(i).getName();
         new AlertDialog.Builder(requireContext()).setTitle("Chọn tài khoản").setItems(names, (dialog, which) -> {
@@ -407,82 +371,6 @@ public class AddTransactionFragment extends Fragment {
         }).show();
     }
 
-    private void validateAndSave() {
-        String amountStr = etAmount.getText().toString().trim();
-        if (amountStr.isEmpty() || selectedCategoryId == -1 || selectedAccountId == -1) {
-            Toast.makeText(getContext(), "Vui lòng nhập đầy đủ thông tin", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        final double amount = Double.parseDouble(amountStr);
-        final String note = etNote.getText().toString();
-        final String date = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(calendar.getTime());
-        final String month = new SimpleDateFormat("MM-yyyy", Locale.getDefault()).format(calendar.getTime());
-        final String userId = FirebaseAuth.getInstance().getUid();
-        final AppDatabase db = AppDatabase.getDatabase(requireContext());
-
-        AppDatabase.databaseWriteExecutor.execute(() -> {
-            Budget budget = db.budgetDao().getBudgetSync(userId, selectedCategoryId, month);
-            if (budget != null && "EXPENSE".equals(selectedType)) {
-                Double currentSpent = db.transactionDao().getCategoryTotalByMonthExcludeSync(userId, selectedCategoryId, month, transactionId);
-                double totalAfter = (currentSpent != null ? currentSpent : 0.0) + amount;
-
-                if (totalAfter > budget.getAmountLimit()) {
-                    showBudgetWarning("Vượt quá ngân sách!", 
-                        "Khoản chi này (" + formatCurrency(amount) + ") sẽ làm bạn vượt quá ngân sách " + formatCurrency(budget.getAmountLimit()) + " của mục này. Bạn vẫn muốn lưu?", 
-                        amount, note, date);
-                    return;
-                } else if (totalAfter >= budget.getAmountLimit() * 0.8) {
-                    showBudgetWarning("Sắp hết ngân sách!", 
-                        "Khoản chi này (" + formatCurrency(amount) + ") sẽ khiến bạn tiêu hết hơn 80% ngân sách tháng của mục này. Bạn vẫn muốn tiếp tục?",
-                        amount, note, date);
-                    return;
-                }
-            }
-            performSave(amount, note, date);
-        });
-    }
-
-    private void showBudgetWarning(String title, String message, double amount, String note, String date) {
-        if (getActivity() != null) {
-            getActivity().runOnUiThread(() -> {
-                new AlertDialog.Builder(requireContext())
-                        .setTitle(title)
-                        .setMessage(message)
-                        .setPositiveButton("Vẫn lưu", (dialog, which) -> {
-                            AppDatabase.databaseWriteExecutor.execute(() -> performSave(amount, note, date));
-                        })
-                        .setNegativeButton("Hủy", null)
-                        .show();
-            });
-        }
-    }
-
-    private void performSave(double amount, String note, String date) {
-        String userId = FirebaseAuth.getInstance().getUid();
-        AppDatabase db = AppDatabase.getDatabase(requireContext());
-
-        Transaction transaction = new Transaction();
-        if (transactionId != -1) transaction.setId(transactionId);
-        transaction.setAmount(amount);
-        transaction.setType(selectedType);
-        transaction.setAccountId(selectedAccountId);
-        transaction.setCategoryID(selectedCategoryId);
-        transaction.setNote(note);
-        transaction.setDate(date);
-        transaction.setUserId(userId);
-        
-        if (transactionId == -1) db.transactionDao().insert(transaction);
-        else db.transactionDao().update(transaction);
-        
-        BalanceWidget.updateWidget(requireContext());
-
-        if (getActivity() != null) {
-            getActivity().runOnUiThread(() -> Navigation.findNavController(requireView()).navigateUp());
-        }
-    }
-
-    private String formatCurrency(double amount) {
-        return NumberFormat.getCurrencyInstance(new Locale("vi", "VN")).format(amount);
-    }
+    private void updateDateLabel() { tvDate.setText(new SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(calendar.getTime())); }
+    private String formatCurrency(double amount) { return NumberFormat.getCurrencyInstance(new Locale("vi", "VN")).format(amount); }
 }

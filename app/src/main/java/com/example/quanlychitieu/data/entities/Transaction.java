@@ -15,6 +15,7 @@ public class Transaction {
     private int categoryID;
     private int accountId;
     private String note;
+    private String imageUrl; // URL ảnh hóa đơn trên Firebase Storage
     private long lastUpdated;
 
     public int getId() { return id; }
@@ -35,6 +36,8 @@ public class Transaction {
     public void setAccountId(int accountId) { this.accountId = accountId; }
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
+    public String getImageUrl() { return imageUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public long getLastUpdated() { return lastUpdated; }
     public void setLastUpdated(long lastUpdated) { this.lastUpdated = lastUpdated; }
 }
