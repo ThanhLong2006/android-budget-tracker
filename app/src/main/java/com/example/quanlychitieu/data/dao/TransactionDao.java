@@ -46,6 +46,9 @@ public interface TransactionDao {
     @Query("SELECT SUM(amount) FROM `transaction` WHERE userId = :userId AND type = :type AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')")
     LiveData<Double> getMonthlyTotalByType(String userId, String type);
 
+    @Query("SELECT SUM(amount) FROM `transaction` WHERE userId = :userId AND type = :type AND strftime('%Y-%m', date) = :month")
+    LiveData<Double> getSpecificMonthlyTotal(String userId, String type, String month);
+
     @Query("SELECT SUM(amount) FROM `transaction` WHERE userId = :userId AND categoryID = :categoryId AND strftime('%m-%Y', date) = :month AND type = 'EXPENSE'")
     LiveData<Double> getCategoryTotalByMonth(String userId, int categoryId, String month);
 
@@ -69,7 +72,6 @@ public interface TransactionDao {
            "GROUP BY date ORDER BY date ASC LIMIT 7")
     LiveData<List<ChartData>> getDailyStats(String userId, String type);
 
-    // Truy vấn mới: Lấy cả Thu và Chi để so sánh xu hướng
     @Query("SELECT date as label, " +
            "SUM(CASE WHEN type = 'INCOME' THEN amount ELSE 0 END) as incomeValue, " +
            "SUM(CASE WHEN type = 'EXPENSE' THEN amount ELSE 0 END) as expenseValue " +

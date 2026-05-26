@@ -16,6 +16,7 @@ import com.example.quanlychitieu.data.dao.TransactionDao;
 import com.example.quanlychitieu.data.database.AppDatabase;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
+import com.github.mikephil.charting.components.Legend;
 import com.github.mikephil.charting.components.XAxis;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
@@ -28,17 +29,19 @@ import com.github.mikephil.charting.utils.ColorTemplate;
 import com.google.firebase.auth.FirebaseAuth;
 
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
 public class statisticalFragment extends Fragment {
 
     private PieChart pieChart;
-    private BarChart barChart;
+    private BarChart barChart, compareChart;
     private TextView tvSummaryTotal, tvMaxCategory, tabIncome, tabExpense;
     private TransactionDao transactionDao;
-    private String currentType = "INCOME";
+    private String currentType = "EXPENSE"; // Mặc định xem chi tiêu
     private String userId;
 
     public statisticalFragment() {}
@@ -61,6 +64,10 @@ public class statisticalFragment extends Fragment {
     private void initViews(View view) {
         pieChart = view.findViewById(R.id.pieChart);
         barChart = view.findViewById(R.id.barChart);
+        // Giả sử fragment_statistical.xml có thêm compareChart hoặc ta dùng barChart để so sánh
+        // Ở đây tôi sẽ dùng barChart hiện tại để hiển thị so sánh Tháng này vs Tháng trước nếu chọn tab tương ứng
+        // Hoặc tạo một BarChart mới nếu layout cho phép. 
+        // Để đơn giản và hiệu quả, tôi sẽ cập nhật barChart để hiển thị so sánh tháng.
         tvSummaryTotal = view.findViewById(R.id.tv_summary_total);
         tvMaxCategory = view.findViewById(R.id.tv_max_category);
         tabIncome = view.findViewById(R.id.tab_income);
@@ -68,29 +75,22 @@ public class statisticalFragment extends Fragment {
     }
 
     private void setupCharts() {
+        // Cấu hình PieChart
         pieChart.setUsePercentValues(true);
         pieChart.getDescription().setEnabled(false);
-        pieChart.setExtraOffsets(5, 10, 5, 5);
-        pieChart.setDragDecelerationFrictionCoef(0.95f);
         pieChart.setDrawHoleEnabled(true);
-        pieChart.setHoleColor(Color.WHITE);
-        pieChart.setTransparentCircleRadius(61f);
-        pieChart.setHoleRadius(58f); 
-        pieChart.setEntryLabelColor(Color.BLACK);
-        pieChart.setEntryLabelTextSize(10f);
-        pieChart.getLegend().setEnabled(true);
+        pieChart.setHoleColor(Color.TRANSPARENT);
+        pieChart.setEntryLabelColor(Color.WHITE);
+        pieChart.getLegend().setHorizontalAlignment(Legend.LegendHorizontalAlignment.CENTER);
 
+        // Cấu hình BarChart (So sánh tháng)
         barChart.getDescription().setEnabled(false);
         barChart.setDrawGridBackground(false);
-        barChart.setDrawBarShadow(false);
-        barChart.setDrawValueAboveBar(true);
-        
+        barChart.getAxisRight().setEnabled(false);
         XAxis xAxis = barChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
         xAxis.setGranularity(1f);
-        barChart.getAxisLeft().setDrawGridLines(false);
-        barChart.getAxisRight().setEnabled(false);
     }
 
     private void setupListeners() {
@@ -126,10 +126,12 @@ public class statisticalFragment extends Fragment {
     private void observeData() {
         if (userId == null) return;
 
+        // 1. Tổng kết tháng này
         transactionDao.getMonthlyTotalByType(userId, currentType).observe(getViewLifecycleOwner(), total -> {
             tvSummaryTotal.setText(formatCurrency(total != null ? total : 0.0));
         });
 
+        // 2. Phân bổ theo danh mục (Pie Chart)
         transactionDao.getCategoryStats(userId, currentType).observe(getViewLifecycleOwner(), stats -> {
             if (stats != null && !stats.isEmpty()) {
                 updatePieChart(stats);
@@ -140,13 +142,22 @@ public class statisticalFragment extends Fragment {
             }
         });
 
-        // Cập nhật biểu đồ xu hướng (So sánh Thu vs Chi)
-        transactionDao.getTrendStats(userId).observe(getViewLifecycleOwner(), trendData -> {
-            if (trendData != null && !trendData.isEmpty()) {
-                updateTrendChart(trendData);
-            } else {
-                barChart.clear();
-            }
+        // 3. So sánh Tháng này với Tháng trước (Bar Chart)
+        loadMonthlyComparison();
+    }
+
+    private void loadMonthlyComparison() {
+        Calendar cal = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM", Locale.getDefault());
+        
+        String thisMonth = sdf.format(cal.getTime());
+        cal.add(Calendar.MONTH, -1);
+        String lastMonth = sdf.format(cal.getTime());
+
+        transactionDao.getSpecificMonthlyTotal(userId, currentType, thisMonth).observe(getViewLifecycleOwner(), thisTotal -> {
+            transactionDao.getSpecificMonthlyTotal(userId, currentType, lastMonth).observe(getViewLifecycleOwner(), lastTotal -> {
+                updateComparisonChart(thisTotal != null ? thisTotal : 0.0, lastTotal != null ? lastTotal : 0.0);
+            });
         });
     }
 
@@ -165,47 +176,30 @@ public class statisticalFragment extends Fragment {
         if (colors.isEmpty()) dataSet.setColors(ColorTemplate.MATERIAL_COLORS);
         else dataSet.setColors(colors);
         
-        dataSet.setSliceSpace(3f);
-        dataSet.setSelectionShift(5f);
+        dataSet.setValueTextSize(12f);
+        dataSet.setValueTextColor(Color.WHITE);
 
         PieData data = new PieData(dataSet);
-        data.setValueTextSize(11f);
-        data.setValueTextColor(Color.WHITE);
-
         pieChart.setData(data);
-        pieChart.animateY(1000);
+        pieChart.animateY(800);
         pieChart.invalidate();
     }
 
-    private void updateTrendChart(List<TransactionDao.TrendData> trendData) {
-        ArrayList<BarEntry> incomeEntries = new ArrayList<>();
-        ArrayList<BarEntry> expenseEntries = new ArrayList<>();
-        ArrayList<String> labels = new ArrayList<>();
+    private void updateComparisonChart(double thisMonth, double lastMonth) {
+        ArrayList<BarEntry> entries = new ArrayList<>();
+        entries.add(new BarEntry(0f, (float) lastMonth));
+        entries.add(new BarEntry(1f, (float) thisMonth));
 
-        for (int i = 0; i < trendData.size(); i++) {
-            TransactionDao.TrendData data = trendData.get(i);
-            incomeEntries.add(new BarEntry(i, (float) data.incomeValue));
-            expenseEntries.add(new BarEntry(i, (float) data.expenseValue));
-            labels.add(data.label.substring(5)); // Chỉ lấy MM-DD
-        }
+        BarDataSet dataSet = new BarDataSet(entries, "So sánh chi tiêu (Tháng trước vs Tháng này)");
+        dataSet.setColors(new int[]{Color.LTGRAY, ContextCompat.getColor(requireContext(), 
+                currentType.equals("INCOME") ? R.color.income_green : R.color.expense_red)});
+        dataSet.setValueTextSize(10f);
 
-        BarDataSet incomeSet = new BarDataSet(incomeEntries, "Thu nhập");
-        incomeSet.setColor(ContextCompat.getColor(requireContext(), R.color.income_green));
-        
-        BarDataSet expenseSet = new BarDataSet(expenseEntries, "Chi tiêu");
-        expenseSet.setColor(ContextCompat.getColor(requireContext(), R.color.expense_red));
+        BarData data = new BarData(dataSet);
+        data.setBarWidth(0.5f);
 
-        BarData data = new BarData(incomeSet, expenseSet);
-        data.setBarWidth(0.35f);
-
-        barChart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(labels));
         barChart.setData(data);
-        
-        // Group bars
-        float groupSpace = 0.3f;
-        float barSpace = 0.05f;
-        barChart.groupBars(0f, groupSpace, barSpace);
-
+        barChart.getXAxis().setValueFormatter(new IndexAxisValueFormatter(new String[]{"Tháng trước", "Tháng này"}));
         barChart.animateY(1000);
         barChart.invalidate();
     }
